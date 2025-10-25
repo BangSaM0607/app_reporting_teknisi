@@ -183,6 +183,24 @@ class _LayarLoginState extends State<LayarLogin> {
                           ),
                         ),
                 ),
+                const SizedBox(height: 12),
+
+                // Tombol Daftar/Register
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Belum punya akun?'),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/register');
+                      },
+                      child: const Text(
+                        'DAFTAR',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
