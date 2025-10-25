@@ -1,5 +1,3 @@
-// lib/screens/dashboard/layar_dashboard_teknisi.dart
-
 import 'package:flutter/material.dart';
 
 class LayarDashboardTeknisi extends StatelessWidget {
