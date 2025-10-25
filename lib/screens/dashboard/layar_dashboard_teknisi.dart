@@ -9,7 +9,7 @@ class LayarDashboardTeknisi extends StatefulWidget {
 }
 
 class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
-  String _namaPengguna = '';
+  String _namaLengkap = '';
 
   @override
   void initState() {
@@ -45,7 +45,7 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
 
     if (!mounted) return;
     setState(() {
-      _namaPengguna = nama.isNotEmpty ? nama : 'Teknisi';
+      _namaLengkap = nama.isNotEmpty ? nama : 'Teknisi';
     });
   }
 
@@ -81,7 +81,7 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
 
   // Konten Utama Dashboard
   Widget _buildBody(BuildContext context) {
-    final String namaPengguna = _namaPengguna;
+    final String namaLengkap = _namaLengkap;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -90,7 +90,7 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
         children: [
           // 1. Bagian Sapaan
           Text(
-            'Selamat Datang, $namaPengguna!',
+            'Selamat Datang, $namaLengkap!',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
