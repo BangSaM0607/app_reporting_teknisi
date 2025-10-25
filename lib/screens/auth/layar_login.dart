@@ -136,6 +136,20 @@ class _LayarLoginState extends State<LayarLogin> {
                       )
                     : const Text('MASUK', style: TextStyle(fontSize: 18)),
               ),
+              // 5. Tombol Daftar (Link ke halaman pendaftaran)
+              TextButton(
+                onPressed: () {
+                  // Navigasi ke Layar Pendaftaran
+                  Navigator.pushNamed(context, '/register');
+                },
+                child: Text(
+                  'Belum punya akun? DAFTAR DI SINI',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.secondary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
