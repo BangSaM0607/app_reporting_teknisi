@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/auth/layar_login.dart'; // Import Halaman Login
+import 'screens/auth/layar_daftar.dart'; // Import Halaman Daftar
 import 'screens/dashboard/layar_dashboard_teknisi.dart'; // Import Halaman Dashboard
 
 Future<void> main() async {
