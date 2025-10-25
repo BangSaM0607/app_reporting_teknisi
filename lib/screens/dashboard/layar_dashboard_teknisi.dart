@@ -1,7 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class LayarDashboardTeknisi extends StatelessWidget {
+class LayarDashboardTeknisi extends StatefulWidget {
   const LayarDashboardTeknisi({super.key});
+
+  @override
+  State<LayarDashboardTeknisi> createState() => _LayarDashboardTeknisiState();
+}
+
+class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
+  String _namaPengguna = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    String nama = '';
+
+    if (user != null) {
+      // Coba ambil nama lengkap dari tabel profiles (jika ada)
+      try {
+        final Map<String, dynamic>? res = await Supabase.instance.client
+            .from('profiles')
+            .select('nama_lengkap')
+            .eq('id', user.id)
+            .maybeSingle();
+
+        if (res != null && res['nama_lengkap'] != null) {
+          nama = (res['nama_lengkap'] as String).trim();
+        }
+      } catch (_) {
+        // Kalau gagal, kita fallback ke email username
+      }
+
+      if (nama.isEmpty && user.email != null) {
+        // Gunakan bagian sebelum '@' dari email sebagai username
+        nama = user.email!.split('@').first;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _namaPengguna = nama.isNotEmpty ? nama : 'Teknisi';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,9 +62,6 @@ class LayarDashboardTeknisi extends StatelessWidget {
 
   // Header Aplikasi
   AppBar _buildAppBar(BuildContext context) {
-    // Placeholder untuk nama pengguna yang akan diambil dari Supabase
-    final String namaPengguna = 'Nama Teknisi';
-
     return AppBar(
       title: const Text('Dashboard Teknisi'),
       centerTitle: false,
@@ -26,8 +69,10 @@ class LayarDashboardTeknisi extends StatelessWidget {
         // Tombol Logout
         IconButton(
           icon: const Icon(Icons.exit_to_app),
-          onPressed: () {
-            // Logic Logout menggunakan Supabase SDK
+          onPressed: () async {
+            await Supabase.instance.client.auth.signOut();
+            if (!context.mounted) return;
+            Navigator.pushReplacementNamed(context, '/login');
           },
         ),
       ],
@@ -36,8 +81,7 @@ class LayarDashboardTeknisi extends StatelessWidget {
 
   // Konten Utama Dashboard
   Widget _buildBody(BuildContext context) {
-    // Placeholder untuk nama pengguna yang sudah login
-    final String namaPengguna = 'Budi Santoso';
+    final String namaPengguna = _namaPengguna;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
