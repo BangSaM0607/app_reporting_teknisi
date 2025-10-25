@@ -40,6 +40,9 @@ class MyApp extends StatelessWidget {
         // Setelah login sukses, user diarahkan ke sini.
         '/dashboard-teknisi': (context) => const LayarDashboardTeknisi(),
 
+        // Halaman Pendaftaran (jika diperlukan)
+        '/register': (context) => const LayarDaftar(),
+
         // --- Tambahan untuk Fitur Lain ---
         // '/input-laporan': (context) => const LayarInputLaporan(), // Contoh Route untuk Form Laporan
         // '/detail-laporan': (context) => const LayarDetailLaporan(),
