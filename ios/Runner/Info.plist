@@ -51,5 +51,9 @@
 	<string>Aplikasi memerlukan akses ke kamera untuk mengambil foto bukti pekerjaan secara langsung.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Aplikasi memerlukan akses ke mikrofon untuk merekam video (jika diperlukan).</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to location when open to get your current position.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to location when in the background.</string>
 </dict>
 </plist>

@@ -176,7 +176,7 @@ class _LayarLoginState extends State<LayarLogin> {
                           ),
                         )
                       : const Text(
-                          'MASUK KE SISTEM',
+                          'LOG IN',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
