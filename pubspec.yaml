@@ -36,7 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   supabase_flutter: ^2.5.0 
   image_picker: ^1.0.4
-  geolocator: ^10.1.0  # Add this line
+  geolocator: ^10.1.0 
+  geocoding: ^2.1.1
 
 dev_dependencies:
   flutter_test:

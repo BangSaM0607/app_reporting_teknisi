@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'dart:io'; // Untuk menggunakan File() saat menampilkan gambar
 
 class LayarBuatReport extends StatefulWidget {
@@ -74,15 +75,28 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
         return;
       }
 
+      // Dapatkan posisi
       Position posisi = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      setState(() {
-        _koordinatGPS = "${posisi.latitude}, ${posisi.longitude}";
-        _lokasiKontroler.text =
-            'Lokasi GPS Terambil: ${posisi.latitude.toStringAsFixed(4)}, ${posisi.longitude.toStringAsFixed(4)}';
-      });
+      // Konversi koordinat ke alamat
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        posisi.latitude,
+        posisi.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        String alamat =
+            '${place.street}, ${place.subLocality}, ${place.locality}, ${place.subAdministrativeArea}';
+
+        setState(() {
+          _koordinatGPS =
+              "${posisi.latitude}, ${posisi.longitude}"; // tetap simpan untuk database
+          _lokasiKontroler.text = alamat;
+        });
+      }
     } catch (e) {
       ScaffoldMessenger.of(
         context,
