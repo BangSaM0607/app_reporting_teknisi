@@ -67,9 +67,9 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading image: $e')));
       }
     }
   }
