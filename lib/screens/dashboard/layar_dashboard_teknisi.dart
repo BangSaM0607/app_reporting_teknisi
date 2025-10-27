@@ -145,8 +145,14 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
   Widget _buildFAB(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () {
-        // Navigasi ke halaman Form Input Laporan Baru
-        Navigator.pushNamed(context, '/input-laporan');
+        // Navigate to LayarBuatReport screen
+        Navigator.pushNamed(context, '/buat-report').then((value) {
+          // Refresh dashboard data when returning from create report screen
+          setState(() {
+            _loadUserName(); // Refresh user data
+            // Add any other refresh functions here
+          });
+        });
       },
       icon: const Icon(Icons.add),
       label: const Text('BUAT LAPORAN BARU'),

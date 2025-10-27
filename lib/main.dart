@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'screens/auth/layar_login.dart'; // Import Halaman Login
-import 'screens/auth/layar_daftar.dart'; // Import Halaman Daftar
-import 'screens/dashboard/layar_dashboard_teknisi.dart'; // Import Halaman Dashboard
+import 'screens/auth/layar_login.dart';
+import 'screens/auth/layar_daftar.dart';
+import 'screens/dashboard/layar_dashboard_teknisi.dart';
+import 'screens/report/layar_buat_report.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,30 +25,17 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Aplikasi Pelaporan Teknisi',
       theme: ThemeData(
-        primarySwatch:
-            Colors.blue, // Sesuaikan dengan warna branding PT. SMARTNET
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
       ),
-
-      // 1. Definisikan Route Awal
-      // Aplikasi akan selalu memulai dari sini, biasanya layar splash atau login.
       initialRoute: '/login',
-
-      // 2. Daftarkan Semua Named Routes
       routes: {
-        // Halaman Otentikasi
         '/login': (context) => const LayarLogin(),
-
-        // Halaman Dashboard Utama
-        // Setelah login sukses, user diarahkan ke sini.
         '/dashboard-teknisi': (context) => const LayarDashboardTeknisi(),
-
-        // Halaman Pendaftaran (jika diperlukan)
         '/register': (context) => const LayarDaftar(),
-
-        // --- Tambahan untuk Fitur Lain ---
-        // '/input-laporan': (context) => const LayarInputLaporan(), // Contoh Route untuk Form Laporan
-        // '/detail-laporan': (context) => const LayarDetailLaporan(),
+        '/buat-report': (context) => const LayarBuatReport(),
       },
+      debugShowCheckedModeBanner: false, // Remove debug banner
     );
   }
 }
