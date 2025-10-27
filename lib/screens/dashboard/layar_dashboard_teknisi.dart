@@ -22,24 +22,21 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
     String nama = '';
 
     if (user != null) {
-      // Coba ambil nama lengkap dari tabel profiles (jika ada)
       try {
         final Map<String, dynamic>? res = await Supabase.instance.client
             .from('profiles')
             .select('nama_lengkap')
             .eq('id', user.id)
-            .maybeSingle();
+            .single();
 
         if (res != null && res['nama_lengkap'] != null) {
           nama = (res['nama_lengkap'] as String).trim();
         }
-      } catch (_) {
-        // Kalau gagal, kita fallback ke email username
-      }
-
-      if (nama.isEmpty && user.email != null) {
-        // Gunakan bagian sebelum '@' dari email sebagai username
-        nama = user.email!.split('@').first;
+      } catch (e) {
+        // If error occurs, fallback to email username
+        if (user.email != null) {
+          nama = user.email!.split('@').first;
+        }
       }
     }
 
@@ -90,7 +87,7 @@ class _LayarDashboardTeknisiState extends State<LayarDashboardTeknisi> {
         children: [
           // 1. Bagian Sapaan
           Text(
-            'Selamat Datang, $namaLengkap!',
+            'Selamat Datang, ${_namaLengkap}!',
             style: Theme.of(
               context,
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),

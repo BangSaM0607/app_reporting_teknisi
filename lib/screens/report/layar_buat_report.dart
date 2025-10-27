@@ -22,6 +22,7 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
   List<XFile> _fotoBukti = []; // Menyimpan file foto lokal yang dipilih
   String? _koordinatGPS; // Menyimpan koordinat Latitude,Longitude
   bool _sedangMemuat = false;
+  DateTime _selectedDate = DateTime.now();
 
   final _klienSupabase = Supabase.instance.client;
 
@@ -88,6 +89,21 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       ).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
     } finally {
       setState(() => _sedangMemuat = false);
+    }
+  }
+
+  // Method to handle date picking
+  Future<void> _pilihTanggal() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() {
+        _selectedDate = picked;
+      });
     }
   }
 
