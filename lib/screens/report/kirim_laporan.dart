@@ -2,27 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:io'; // Untuk menggunakan File() saat menampilkan gambar
+import 'dart:io';
 
-class LayarBuatReport extends StatefulWidget {
-  const LayarBuatReport({super.key});
+class LayarKirimLaporan extends StatefulWidget {
+  const LayarKirimLaporan({super.key});
 
   @override
-  State<LayarBuatReport> createState() => _LayarBuatReportState();
+  State<LayarKirimLaporan> createState() => _LayarKirimLaporanState();
 }
 
-class _LayarBuatReportState extends State<LayarBuatReport> {
+class _LayarKirimLaporanState extends State<LayarKirimLaporan> {
   // 1. Controller Formulir
   final _kunciForm = GlobalKey<FormState>();
   final _judulKontroler = TextEditingController();
   final _deskripsiKontroler = TextEditingController();
-  final _lokasiKontroler = TextEditingController(); // Untuk tampilan lokasi GPS
+  final _lokasiKontroler = TextEditingController();
 
   // 2. State untuk Data Laporan
-  List<XFile> _fotoBukti = []; // Menyimpan file foto lokal yang dipilih
-  String? _koordinatGPS; // Menyimpan koordinat Latitude,Longitude
+  List<XFile> _fotoBukti = [];
   bool _sedangMemuat = false;
-  DateTime _selectedDate = DateTime.now();
 
   final _klienSupabase = Supabase.instance.client;
 
@@ -39,10 +37,10 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
   // Fungsi: Mengambil Foto dari Kamera/Galeri
   Future<void> _ambilFoto(ImageSource sumber) async {
     final ImagePicker pemilihFoto = ImagePicker();
+    // Batas kompresi bisa ditambahkan di sini jika diperlukan (imageQuality: 50)
     final XFile? gambar = await pemilihFoto.pickImage(source: sumber);
 
     if (gambar != null && _fotoBukti.length < 5) {
-      // Batasi maksimal 5 foto
       setState(() {
         _fotoBukti.add(gambar);
       });
@@ -53,25 +51,14 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
   Future<void> _ambilLokasiSaatIni() async {
     setState(() => _sedangMemuat = true);
     try {
-      // Cek izin lokasi
+      // Cek izin lokasi dan meminta izin jika diperlukan
       LocationPermission izin = await Geolocator.checkPermission();
-      if (izin == LocationPermission.denied) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Izin lokasi diperlukan untuk melanjutkan'),
-          ),
-        );
+      if (izin == LocationPermission.denied ||
+          izin == LocationPermission.deniedForever) {
         izin = await Geolocator.requestPermission();
-      }
-      if (izin == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Izin lokasi ditolak permanen. Mohon aktifkan di pengaturan',
-            ),
-          ),
-        );
-        return;
+        if (izin != LocationPermission.whileInUse &&
+            izin != LocationPermission.always)
+          return;
       }
 
       Position posisi = await Geolocator.getCurrentPosition(
@@ -79,37 +66,23 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       );
 
       setState(() {
-        _koordinatGPS = "${posisi.latitude}, ${posisi.longitude}";
+        // Tampilkan koordinat ke kontroler untuk visualisasi
         _lokasiKontroler.text =
-            'Lokasi GPS Terambil: ${posisi.latitude.toStringAsFixed(4)}, ${posisi.longitude.toStringAsFixed(4)}';
+            'Lokasi GPS Terambil: ${posisi.latitude.toStringAsFixed(6)}, ${posisi.longitude.toStringAsFixed(6)}';
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengambil lokasi: ${e.toString()}')),
+      );
     } finally {
       setState(() => _sedangMemuat = false);
-    }
-  }
-
-  // Method to handle date picking
-  Future<void> _pilihTanggal() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null && picked != _selectedDate) {
-      setState(() {
-        _selectedDate = picked;
-      });
     }
   }
 
   // --- FUNGSI SUBMIT LAPORAN UTAMA ---
 
   Future<void> _kirimLaporan() async {
+    // Validasi form dan cek status loading
     if (!_kunciForm.currentState!.validate() || _sedangMemuat) return;
 
     setState(() => _sedangMemuat = true);
@@ -117,16 +90,16 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
     List<String> daftarUrlFoto = [];
 
     try {
-      // 1. Upload Foto ke Supabase Storage (Bukti Laporan)
+      // 1. Upload Foto ke Supabase Storage
       for (var file in _fotoBukti) {
         final namaFile =
-            '${idPengguna}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+            'laporan/${idPengguna}/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
 
         await _klienSupabase.storage
             .from('bukti_laporan')
             .upload(namaFile, File(file.path));
 
-        // Mendapatkan URL publik/download untuk disimpan di Database
+        // Mendapatkan URL publik/download
         final urlPublik = _klienSupabase.storage
             .from('bukti_laporan')
             .getPublicUrl(namaFile);
@@ -136,19 +109,23 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       // 2. Insert Data Laporan ke Tabel 'laporan'
       await _klienSupabase.from('laporan').insert({
         'teknisi_id': idPengguna,
+        'tanggal_laporan': DateTime.now().toIso8601String().substring(
+          0,
+          10,
+        ), // Format YYYY-MM-DD
         'judul_pekerjaan': _judulKontroler.text.trim(),
         'deskripsi_pekerjaan': _deskripsiKontroler.text.trim(),
-        'lokasi': _lokasiKontroler.text.trim(),
+        'lokasi': _lokasiKontroler.text
+            .trim(), // Berisi data GPS yang divisualisasikan
         'foto_bukti': daftarUrlFoto, // Array of URLs
-        'status_laporan': 'Pending',
+        'status_laporan': 'Pending', // Default
         'waktu_mulai': DateTime.now().toIso8601String(),
-        'tanggal_pekerjaan': _selectedDate.toIso8601String(), // Add this line
       });
 
       // 3. Sukses dan Navigasi
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Laporan berhasil disimpan! Status: Pending.'),
+          content: Text('Laporan berhasil dikirim! Status: Pending.'),
         ),
       );
       Navigator.pop(context); // Kembali ke dashboard
@@ -157,9 +134,9 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
         SnackBar(content: Text('Gagal upload foto: ${e.message}')),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan laporan: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan laporan: ${e.toString()}')),
+      );
     } finally {
       setState(() => _sedangMemuat = false);
     }
@@ -170,7 +147,7 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Buat Laporan Baru')),
+      appBar: AppBar(title: const Text('Kirim Laporan Baru')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -182,39 +159,16 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
               TextFormField(
                 controller: _judulKontroler,
                 decoration: const InputDecoration(
-                  labelText: 'Judul Pekerjaan',
+                  labelText: 'Judul Pekerjaan (Wajib)',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.work),
+                  prefixIcon: Icon(Icons.title),
                 ),
                 validator: (nilai) {
                   if (nilai == null || nilai.isEmpty) {
-                    return 'Judul pekerjaan harus diisi';
+                    return 'Judul pekerjaan harus diisi.';
                   }
                   return null;
                 },
-              ),
-              const SizedBox(height: 16),
-
-              // Date Picker Field
-              InkWell(
-                onTap: _pilihTanggal,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Tanggal Pekerjaan',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                      const Icon(Icons.arrow_drop_down),
-                    ],
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
 
@@ -227,12 +181,6 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
                   prefixIcon: Icon(Icons.description),
                 ),
                 maxLines: 4,
-                validator: (nilai) {
-                  if (nilai == null || nilai.isEmpty) {
-                    return 'Deskripsi pekerjaan harus diisi';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 24),
 
@@ -280,7 +228,7 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Lokasi Pekerjaan:',
+          'Lokasi Pekerjaan (GPS):',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
@@ -290,10 +238,10 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
               child: TextFormField(
                 controller: _lokasiKontroler,
                 decoration: const InputDecoration(
-                  labelText: 'GPS / Deskripsi Lokasi',
+                  labelText: 'Koordinat GPS',
                   border: OutlineInputBorder(),
                 ),
-                readOnly: true, // Hanya untuk menampilkan hasil GPS
+                readOnly: true,
               ),
             ),
             const SizedBox(width: 10),
@@ -324,23 +272,31 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
           runSpacing: 8.0,
           children: _fotoBukti
               .map(
-                (foto) => Stack(
+                (file) => Stack(
                   children: [
                     Image.file(
-                      File(foto.path),
-                      width: 100,
-                      height: 100,
+                      File(file.path),
+                      width: 80,
+                      height: 80,
                       fit: BoxFit.cover,
                     ),
                     Positioned(
                       right: 0,
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () {
+                      child: GestureDetector(
+                        onTap: () {
                           setState(() {
-                            _fotoBukti.remove(foto); // Hapus foto dari list
+                            _fotoBukti.remove(file); // Hapus foto dari list
                           });
                         },
+                        child: const CircleAvatar(
+                          radius: 10,
+                          backgroundColor: Colors.red,
+                          child: Icon(
+                            Icons.close,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -376,19 +332,19 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
           child: Wrap(
             children: <Widget>[
               ListTile(
-                leading: const Icon(Icons.photo_camera),
-                title: const Text('Ambil Foto dengan Kamera'),
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Galeri Foto'),
                 onTap: () {
+                  _ambilFoto(ImageSource.gallery);
                   Navigator.pop(context);
-                  _ambilFoto(ImageSource.camera);
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Pilih dari Galeri'),
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Kamera'),
                 onTap: () {
+                  _ambilFoto(ImageSource.camera);
                   Navigator.pop(context);
-                  _ambilFoto(ImageSource.gallery);
                 },
               ),
             ],
