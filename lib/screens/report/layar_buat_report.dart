@@ -39,14 +39,38 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
 
   // Fungsi: Mengambil Foto dari Kamera/Galeri
   Future<void> _ambilFoto(ImageSource sumber) async {
-    final ImagePicker pemilihFoto = ImagePicker();
-    final XFile? gambar = await pemilihFoto.pickImage(source: sumber);
+    try {
+      final ImagePicker pemilihFoto = ImagePicker();
+      final XFile? gambar = await pemilihFoto.pickImage(
+        source: sumber,
+        maxWidth: 1920, // Limit image size
+        maxHeight: 1080,
+        imageQuality: 85, // Compress image
+      );
 
-    if (gambar != null && _fotoBukti.length < 5) {
-      // Batasi maksimal 5 foto
-      setState(() {
-        _fotoBukti.add(gambar);
-      });
+      if (gambar == null) return;
+
+      // Pastikan path tidak kosong
+      if (gambar.path.isEmpty) {
+        throw Exception('File path kosong');
+      }
+
+      final File file = File(gambar.path);
+      if (await file.exists()) {
+        if (mounted) {
+          setState(() {
+            if (_fotoBukti.length < 5) _fotoBukti.add(gambar);
+          });
+        }
+      } else {
+        throw Exception('File tidak ditemukan pada path: ${gambar.path}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading image: $e')),
+        );
+      }
     }
   }
 
@@ -89,20 +113,25 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       if (placemarks.isNotEmpty) {
         Placemark place = placemarks[0];
         String alamat =
-            '${place.street}, ${place.subLocality}, ${place.locality}, ${place.subAdministrativeArea}';
+            '${place.street ?? ''}${place.street != null && place.locality != null ? ', ' : ''}${place.locality ?? ''}${place.locality != null && place.administrativeArea != null ? ', ' : ''}${place.administrativeArea ?? ''}'
+                .replaceAll(RegExp(r',\s*,*'), ',')
+                .trim()
+                .replaceAll(RegExp(r'^,|,$'), '');
 
         setState(() {
           _koordinatGPS =
               "${posisi.latitude}, ${posisi.longitude}"; // tetap simpan untuk database
-          _lokasiKontroler.text = alamat;
+          _lokasiKontroler.text = alamat.isNotEmpty ? alamat : '$posisi';
         });
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal mengambil lokasi: $e')));
+      }
     } finally {
-      setState(() => _sedangMemuat = false);
+      if (mounted) setState(() => _sedangMemuat = false);
     }
   }
 
@@ -160,22 +189,28 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
       });
 
       // 3. Sukses dan Navigasi
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Laporan berhasil disimpan! Status: Pending.'),
-        ),
-      );
-      Navigator.pop(context); // Kembali ke dashboard
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Laporan berhasil disimpan! Status: Pending.'),
+          ),
+        );
+        Navigator.pop(context); // Kembali ke dashboard
+      }
     } on StorageException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal upload foto: ${e.message}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal upload foto: ${e.message}')),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan laporan: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menyimpan laporan: $e')));
+      }
     } finally {
-      setState(() => _sedangMemuat = false);
+      if (mounted) setState(() => _sedangMemuat = false);
     }
   }
 
@@ -333,35 +368,7 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
         const SizedBox(height: 8),
 
         // Grid Foto yang sudah dipilih
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: _fotoBukti
-              .map(
-                (foto) => Stack(
-                  children: [
-                    Image.file(
-                      File(foto.path),
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
-                    Positioned(
-                      right: 0,
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () {
-                          setState(() {
-                            _fotoBukti.remove(foto); // Hapus foto dari list
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              .toList(),
-        ),
+        _buildImageGrid(),
 
         const SizedBox(height: 16),
 
@@ -378,6 +385,68 @@ class _LayarBuatReportState extends State<LayarBuatReport> {
           ),
         ),
       ],
+    );
+  }
+
+  // Widget untuk menampilkan grid foto
+  Widget _buildImageGrid() {
+    if (_fotoBukti.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: _fotoBukti.length,
+      itemBuilder: (context, index) {
+        final String path = _fotoBukti[index].path;
+        final File file = File(path);
+        final bool exists = path.isNotEmpty && file.existsSync();
+
+        return AspectRatio(
+          aspectRatio: 1,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: exists
+                    ? Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[300],
+                            child: const Icon(Icons.broken_image, size: 36),
+                          );
+                        },
+                      )
+                    : Container(
+                        color: Colors.grey[300],
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.image_not_supported, size: 36),
+                      ),
+              ),
+              Positioned(
+                right: 0,
+                child: IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () {
+                    setState(() {
+                      _fotoBukti.removeAt(index);
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
